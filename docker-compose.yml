@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  rust-services:
+    build: ./rust-services
+    container_name: rust-services
+    ports:
+      - "4000:4000"
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+    restart: always
+
+  nest-services:
+    build: ./nest-services
+    container_name: nest-services
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_API_URL=${RUST_API_URL}
+      - NEST_API_PORT=${NEST_API_PORT}
+    depends_on:
+      - rust-services
+    restart: always

@@ -1,0 +1,11 @@
+# nest-services
+nest-services/dist
+nest-services/node_modules
+nest-services/build
+
+# rust-services
+rust-services/target
+
+# env
+.env
+
