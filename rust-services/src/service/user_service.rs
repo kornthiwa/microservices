@@ -12,11 +12,14 @@ impl UserService {
     }
     
     // ลงทะเบียนผู้ใช้ใหม่
-    pub async fn register_user(guild_id: &str, user_id: &str, user_name: &str) -> Result<(), mongodb::error::Error> {
+    pub async fn register_user(guild_id: &str, user_id: &str, guild_name: &str, guild_user_nickname: &str, global_name: &str, user_name: &str) -> Result<(), mongodb::error::Error> {
         let users_collection: mongodb::Collection<User> = Self::get_collection().await;
         let user: User = User::new(
             user_id.to_string(),
             guild_id.to_string(),
+            guild_name.to_string(),
+            guild_user_nickname.to_string(),
+            global_name.to_string(),
             user_name.to_string()
         );
         
@@ -45,5 +48,26 @@ impl UserService {
         }).await?;
         
         Ok(user.is_some())
+    }
+
+    pub async fn update_user(user: &User) -> Result<(), mongodb::error::Error> {
+        let users_collection: mongodb::Collection<User> = Self::get_collection().await;
+        let now = mongodb::bson::DateTime::from(std::time::SystemTime::now());
+
+        users_collection.update_one(
+            doc! {
+                "user_id": &user.user_id,
+                "guild_id": &user.guild_id
+            },
+            doc! {
+                "$set": {
+                    "guild_user_nickname": &user.guild_user_nickname,
+                    "global_name": &user.global_name,
+                    "user_name": &user.user_name,
+                    "updated_at": now
+                }
+            }
+        ).await?;
+        Ok(())
     }
 }

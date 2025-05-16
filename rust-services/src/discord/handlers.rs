@@ -14,6 +14,7 @@ impl EventHandler for Handlers {
             let data_read: tokio::sync::RwLockReadGuard<'_, serenity::prelude::TypeMap> = ctx.data.read().await;
             let result: Result<(), serenity::Error> = match command.data.name.as_str() {
                 "user" => commands::user_commands::run(&ctx, &command, &data_read).await,
+                "manga" => commands::manga_commands::run(&ctx, &command, &data_read).await,
                 _ => {
                     // ไม่พบคำสั่ง
                     command.create_response(
@@ -63,5 +64,6 @@ impl EventHandler for Handlers {
 fn collect_all_commands() -> Vec<serenity::all::CreateCommand> {
     vec![
         commands::user_commands::register(),
+        commands::manga_commands::register(),
     ]
 }

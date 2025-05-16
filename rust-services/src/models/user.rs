@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use serde::{ Deserialize, Serialize };
 use mongodb::bson::{doc, oid::ObjectId};
 
@@ -8,18 +7,24 @@ pub struct User {
     pub id: Option<ObjectId>,
     pub user_id: String,
     pub guild_id: String,
+    pub guild_name: String,
+    pub guild_user_nickname: String,
+    pub global_name: String,
     pub user_name: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: mongodb::bson::DateTime,
+    pub updated_at: mongodb::bson::DateTime,
 }
 
 impl User {
-    pub fn new(user_id: String, guild_id: String, user_name: String) -> Self {
-        let now: DateTime<Utc> = Utc::now();
+    pub fn new(user_id: String, guild_id: String, guild_name: String, guild_user_nickname: String, global_name: String, user_name: String) -> Self {
+        let now: mongodb::bson::DateTime = mongodb::bson::DateTime::from(std::time::SystemTime::now());
         User {
             id: None,
             user_id,
             guild_id,
+            guild_name,
+            guild_user_nickname,
+            global_name,
             user_name,
             created_at: now,
             updated_at: now,

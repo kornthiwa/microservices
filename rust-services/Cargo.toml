@@ -10,6 +10,8 @@ futures = "0.3.28"
 tokio = {version = "1.32.0", features = ["full"]}
 chrono = { version = "0.4", features = ["unstable-locales", "serde"] }
 serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "framework"] }
+reqwest = { version = "0.11", features = ["json"] }
+scraper = "0.17"
 
 [dependencies.mongodb]
 version = "3.2.3"
