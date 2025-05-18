@@ -1,5 +1,5 @@
-use serde::{ Deserialize, Serialize };
 use mongodb::bson::{doc, oid::ObjectId, DateTime};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Manga {
@@ -9,13 +9,20 @@ pub struct Manga {
     pub url: String,
     pub latest_chapter: i32,
     pub latest_chapter_url: String,
+    pub image_url: Option<String>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
 }
 
 #[allow(dead_code)]
 impl Manga {
-    pub fn new(title: String, url: String, latest_chapter: i32, latest_chapter_url: String) -> Self {
+    pub fn new(
+        title: String,
+        url: String,
+        latest_chapter: i32,
+        latest_chapter_url: String,
+        image_url: Option<String>,
+    ) -> Self {
         let now = DateTime::from(std::time::SystemTime::now());
         Manga {
             id: None,
@@ -23,8 +30,9 @@ impl Manga {
             url,
             latest_chapter,
             latest_chapter_url,
+            image_url,
             created_at: now,
             updated_at: now,
         }
     }
-} 
+}

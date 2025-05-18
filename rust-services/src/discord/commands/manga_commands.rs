@@ -1,29 +1,23 @@
-use serenity::all::{
-    CreateCommand, CommandInteraction, Context,
-    CreateInteractionResponse, CreateInteractionResponseMessage,
-    CommandOptionType, CreateCommandOption, CreateEmbed, CreateEmbedFooter,
-    Colour
-};
-use crate::service::manga_service::MangaService;
 use crate::models::manga::Manga;
+use crate::service::manga_service::MangaService;
+use serenity::all::{
+    Colour, CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption,
+    CreateEmbed, CreateEmbedFooter, CreateInteractionResponse, CreateInteractionResponseMessage,
+};
 
 pub fn register() -> CreateCommand {
     CreateCommand::new("manga")
         .description("จัดการการ์ตูน")
         .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "add",
-                "เพิ่มการ์ตูนใหม่"
-            )
-            .add_sub_option(
-                CreateCommandOption::new(
-                    CommandOptionType::String,
-                    "url",
-                    "URL ของการ์ตูนที่ต้องการเพิ่ม"
-                )
-                .required(true)
-            )
+            CreateCommandOption::new(CommandOptionType::SubCommand, "add", "เพิ่มการ์ตูนใหม่")
+                .add_sub_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::String,
+                        "url",
+                        "URL ของการ์ตูนที่ต้องการเพิ่ม",
+                    )
+                    .required(true),
+                ),
         )
 }
 
@@ -41,14 +35,16 @@ pub async fn show_manga_info_ui(
         .color(color)
         .footer(CreateEmbedFooter::new("ระบบจัดการการ์ตูน"));
 
-    command.create_response(
-        &ctx.http,
-        CreateInteractionResponse::Message(
-            CreateInteractionResponseMessage::new()
-                .embed(embed)
-                .ephemeral(true)
+    command
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Message(
+                CreateInteractionResponseMessage::new()
+                    .embed(embed)
+                    .ephemeral(true),
+            ),
         )
-    ).await
+        .await
 }
 
 async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
@@ -61,18 +57,23 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
             serenity::all::CommandDataOptionValue::SubCommand(sub_opts) => Some(sub_opts),
             _ => None,
         })
-        .and_then(|sub_opts: &Vec<serenity::all::CommandDataOption>| sub_opts.iter().find(|opt: &&serenity::all::CommandDataOption| opt.name == "url"))
+        .and_then(|sub_opts: &Vec<serenity::all::CommandDataOption>| {
+            sub_opts
+                .iter()
+                .find(|opt: &&serenity::all::CommandDataOption| opt.name == "url")
+        })
         .and_then(|opt: &serenity::all::CommandDataOption| opt.value.as_str())
         .unwrap_or("ไม่มีข้อความ");
 
-    if !url.starts_with("https://www") {
+    if !url.starts_with("https://") {
         return show_manga_info_ui(
             command,
             ctx,
             "URL ไม่ถูกต้อง",
-            "URL ต้องขึ้นต้นด้วย https://www",
+            "URL ต้องขึ้นต้นด้วย https://",
             Colour::RED,
-        ).await;
+        )
+        .await;
     }
 
     // ตรวจสอบว่ามีการ์ตูนนี้ในฐานข้อมูลหรือไม่
@@ -84,15 +85,17 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
                 "การเพิ่มการ์ตูน",
                 "การ์ตูนนี้มีอยู่ในระบบแล้ว",
                 Colour::GOLD,
-            ).await
+            )
+            .await
         }
         Ok(None) => {
             // สร้างข้อมูลการ์ตูนใหม่
             let manga: Manga = Manga::new(
                 "Untitled".to_string(), // ตั้งชื่อชั่วคราว
                 url.to_string(),
-                0, // เริ่มต้นที่ตอนที่ 0
+                0,               // เริ่มต้นที่ตอนที่ 0
                 url.to_string(), // ใช้ URL เดิมเป็น chapter URL
+                None,            // ไม่มีรูปภาพ
             );
 
             // บันทึกลงฐานข้อมูล
@@ -101,11 +104,9 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
                     let description = format!(
                         "**เพิ่มการ์ตูนสำเร็จ**\n\
                         **ชื่อเรื่อง:** {}\n\
-                        **ตอนล่าสุด:** {}\n\
+                        **ตอนล่าสุด:** {:?}\n\
                         **URL:** {}",
-                        manga.title,
-                        manga.latest_chapter,
-                        manga.url
+                        manga.title, manga.latest_chapter, manga.url
                     );
 
                     show_manga_info_ui(
@@ -114,7 +115,8 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
                         "เพิ่มการ์ตูนสำเร็จ",
                         &description,
                         Colour::DARK_GREEN,
-                    ).await
+                    )
+                    .await
                 }
                 Err(e) => {
                     show_manga_info_ui(
@@ -123,7 +125,8 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
                         "เกิดข้อผิดพลาด",
                         &format!("เกิดข้อผิดพลาดในการบันทึกข้อมูล: {}", e),
                         Colour::RED,
-                    ).await
+                    )
+                    .await
                 }
             }
         }
@@ -134,7 +137,8 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
                 "เกิดข้อผิดพลาด",
                 &format!("เกิดข้อผิดพลาดในการตรวจสอบข้อมูล: {}", e),
                 Colour::RED,
-            ).await
+            )
+            .await
         }
     }
 }
@@ -142,21 +146,13 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
 pub async fn run(
     ctx: &Context,
     command: &CommandInteraction,
-    _: &serenity::prelude::TypeMap
+    _: &serenity::prelude::TypeMap,
 ) -> serenity::Result<()> {
     let subcommand = command.data.options.first().unwrap();
     let subcommand_name = &subcommand.name;
 
     match subcommand_name.as_str() {
         "add" => add_manga(ctx, command).await,
-        _ => {
-            show_manga_info_ui(
-                command,
-                ctx,
-                "ไม่รู้จักคำสั่ง",
-                "ไม่รู้จักคำสั่งย่อยนี้",
-                Colour::RED,
-            ).await
-        }
+        _ => show_manga_info_ui(command, ctx, "ไม่รู้จักคำสั่ง", "ไม่รู้จักคำสั่งย่อยนี้", Colour::RED).await,
     }
-} 
+}

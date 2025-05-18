@@ -1,0 +1,186 @@
+use crate::models::channels::Channel;
+use crate::service::channels_service::ChannelsService;
+use serenity::all::{
+    Colour, CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption,
+    CreateEmbed, CreateEmbedFooter, CreateInteractionResponse, CreateInteractionResponseMessage,
+};
+
+pub fn register() -> CreateCommand {
+    CreateCommand::new("channel")
+        .description("จัดการช่อง")
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::SubCommand, "save", "บันทึกข้อมูลช่อง")
+                .add_sub_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Channel,
+                        "channel",
+                        "ช่องที่ต้องการบันทึก",
+                    )
+                    .required(true),
+                ),
+        )
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "list",
+            "ดูรายการช่องทั้งหมด",
+        ))
+}
+
+// UI Utility Function
+pub async fn show_channel_info_ui(
+    command: &CommandInteraction,
+    ctx: &Context,
+    title: &str,
+    description: &str,
+    color: Colour,
+) -> serenity::Result<()> {
+    let embed = CreateEmbed::new()
+        .title(title)
+        .description(description)
+        .color(color)
+        .footer(CreateEmbedFooter::new("ระบบจัดการช่อง"));
+
+    command
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Message(
+                CreateInteractionResponseMessage::new()
+                    .embed(embed)
+                    .ephemeral(true),
+            ),
+        )
+        .await
+}
+
+async fn list_channels(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
+    let guild_id = command.guild_id.unwrap();
+
+    match ChannelsService::get_channels_by_guild(&guild_id.to_string()).await {
+        Ok(channels) => {
+            if channels.is_empty() {
+                show_channel_info_ui(
+                    command,
+                    ctx,
+                    "รายการช่อง",
+                    "ไม่พบช่องที่บันทึกไว้ในระบบ",
+                    Colour::RED,
+                )
+                .await
+            } else {
+                let description = channels
+                    .iter()
+                    .map(|channel| {
+                        format!(
+                            "**{}** ({})\n\
+                        ",
+                            channel.channel_name, channel.channel_id,
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n");
+
+                show_channel_info_ui(command, ctx, "รายการช่องทั้งหมด", &description, Colour::BLUE)
+                    .await
+            }
+        }
+        Err(e) => {
+            show_channel_info_ui(
+                command,
+                ctx,
+                "เกิดข้อผิดพลาด",
+                &format!("เกิดข้อผิดพลาดในการดึงข้อมูล: {}", e),
+                Colour::RED,
+            )
+            .await
+        }
+    }
+}
+
+async fn save_channel(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
+    let channel_id = command
+        .data
+        .options
+        .iter()
+        .find(|opt| opt.name == "save")
+        .and_then(|opt| match &opt.value {
+            serenity::all::CommandDataOptionValue::SubCommand(sub_opts) => Some(sub_opts),
+            _ => None,
+        })
+        .and_then(|sub_opts| sub_opts.iter().find(|opt| opt.name == "channel"))
+        .and_then(|opt| opt.value.as_channel_id())
+        .unwrap();
+
+    let guild_id = command.guild_id.unwrap();
+    let guild = ctx.http.get_guild(guild_id).await?;
+    let guild_name: String = guild.name;
+
+    match channel_id.to_channel(&ctx.http).await {
+        Ok(channel) => {
+            if let serenity::model::channel::Channel::Guild(channel) = channel {
+                let channel_doc = Channel::new(
+                    channel.id.to_string(),
+                    guild_id.to_string(),
+                    channel.name.clone(),
+                    guild_name.clone(),
+                );
+
+                match ChannelsService::create_channel(channel_doc).await {
+                    Ok(_) => {
+                        show_channel_info_ui(
+                            command,
+                            ctx,
+                            "บันทึกข้อมูลสำเร็จ",
+                            &format!("บันทึกข้อมูลช่อง {} ลงฐานข้อมูลสำเร็จ", channel.name),
+                            Colour::DARK_GREEN,
+                        )
+                        .await
+                    }
+                    Err(e) => {
+                        show_channel_info_ui(
+                            command,
+                            ctx,
+                            "เกิดข้อผิดพลาด",
+                            &format!("เกิดข้อผิดพลาดในการบันทึกข้อมูล: {}", e),
+                            Colour::RED,
+                        )
+                        .await
+                    }
+                }
+            } else {
+                show_channel_info_ui(
+                    command,
+                    ctx,
+                    "เกิดข้อผิดพลาด",
+                    "ไม่สามารถบันทึกข้อมูลช่องส่วนตัวได้",
+                    Colour::RED,
+                )
+                .await
+            }
+        }
+        Err(e) => {
+            show_channel_info_ui(
+                command,
+                ctx,
+                "เกิดข้อผิดพลาด",
+                &format!("ไม่พบช่องที่ระบุ: {}", e),
+                Colour::RED,
+            )
+            .await
+        }
+    }
+}
+
+pub async fn run(
+    ctx: &Context,
+    command: &CommandInteraction,
+    _: &serenity::prelude::TypeMap,
+) -> serenity::Result<()> {
+    let subcommand = command.data.options.first().unwrap();
+    let subcommand_name = &subcommand.name;
+
+    match subcommand_name.as_str() {
+        "save" => save_channel(ctx, command).await,
+        "list" => list_channels(ctx, command).await,
+        _ => show_channel_info_ui(command, ctx, "ไม่รู้จักคำสั่ง", "ไม่รู้จักคำสั่งย่อยนี้", Colour::RED).await,
+    }
+}

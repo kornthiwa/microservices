@@ -1,6 +1,6 @@
-use std::env;
-use serenity::all::{Client, GatewayIntents};
 use crate::discord::handlers::Handlers;
+use serenity::all::{Client, GatewayIntents};
+use std::env;
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let token = env::var("DISCORD_TOKEN").expect("ไม่พบ DISCORD_TOKEN");
@@ -21,6 +21,6 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     if let Err(why) = client.start().await {
         println!("เกิดข้อผิดพลาดกับไคลเอนต์: {why:?}");
     }
-    
+
     Ok(())
 }

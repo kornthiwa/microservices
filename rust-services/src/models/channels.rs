@@ -2,38 +2,32 @@ use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct User {
+pub struct Channel {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub user_id: String,
+    pub channel_id: String,
     pub guild_id: String,
     pub guild_name: String,
-    pub guild_user_nickname: String,
-    pub global_name: String,
-    pub user_name: String,
+    pub channel_name: String,
     pub created_at: mongodb::bson::DateTime,
     pub updated_at: mongodb::bson::DateTime,
 }
 
-impl User {
+impl Channel {
     pub fn new(
-        user_id: String,
+        channel_id: String,
         guild_id: String,
+        channel_name: String,
         guild_name: String,
-        guild_user_nickname: String,
-        global_name: String,
-        user_name: String,
     ) -> Self {
         let now: mongodb::bson::DateTime =
             mongodb::bson::DateTime::from(std::time::SystemTime::now());
-        User {
+        Channel {
             id: None,
-            user_id,
+            channel_id,
             guild_id,
             guild_name,
-            guild_user_nickname,
-            global_name,
-            user_name,
+            channel_name,
             created_at: now,
             updated_at: now,
         }

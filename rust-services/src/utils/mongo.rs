@@ -1,7 +1,7 @@
-use mongodb::{Client, Database, Collection, options::ClientOptions};
+use mongodb::{options::ClientOptions, Client, Collection, Database};
 use std::sync::Arc;
-use tokio::sync::OnceCell;
 use std::time::Duration;
+use tokio::sync::OnceCell;
 
 #[derive(Clone, Debug)]
 pub struct MongoPool {
@@ -17,28 +17,27 @@ impl MongoPool {
     pub fn collection<T: Send + Sync>(&self, collection_name: &str) -> Collection<T> {
         self.default_database().collection(collection_name)
     }
-
 }
 
 static MONGO: OnceCell<MongoPool> = OnceCell::const_new();
 
 pub async fn init() -> mongodb::error::Result<()> {
-    let mongo_uri: String = std::env::var("MONGO_URI")
-        .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
-    
-    let db_name: String = std::env::var("MONGO_DB_NAME")
-        .unwrap_or_else(|_| "discord_bot".to_string());
-    
+    let mongo_uri: String =
+        std::env::var("MONGO_URI").unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+
+    let db_name: String =
+        std::env::var("MONGO_DB_NAME").unwrap_or_else(|_| "discord_bot".to_string());
+
     println!("กำลังเชื่อมต่อ MongoDB ที่: {}", mongo_uri);
-    
+
     let mut options: ClientOptions = ClientOptions::parse(&mongo_uri).await?;
     options.max_pool_size = Some(100);
     options.min_pool_size = Some(5);
     options.max_idle_time = Some(Duration::from_secs(60));
     options.server_selection_timeout = Some(Duration::from_secs(5));
-    
+
     let client: Client = Client::with_options(options)?;
-    
+
     match client.list_database_names().await {
         Ok(_) => println!("ทดสอบเชื่อมต่อ MongoDB สำเร็จ"),
         Err(e) => {
@@ -47,12 +46,12 @@ pub async fn init() -> mongodb::error::Result<()> {
             return Err(e.into());
         }
     }
-    
+
     let pool: MongoPool = MongoPool {
         client: Arc::new(client),
         default_db: db_name,
     };
-    
+
     MONGO.set(pool).unwrap();
     println!("เชื่อมต่อ MongoDB สำเร็จ");
     Ok(())

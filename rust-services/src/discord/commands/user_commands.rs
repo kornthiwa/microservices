@@ -1,36 +1,28 @@
-use serenity::all::{
-    CreateCommand, CommandInteraction, Context,
-    CreateInteractionResponse, CreateInteractionResponseMessage,
-    CommandOptionType, CreateCommandOption, CreateEmbed, CreateEmbedFooter,
-    Colour
-};
 use crate::service::user_service::UserService;
 use chrono;
+use serenity::all::{
+    Colour, CommandInteraction, CommandOptionType, Context, CreateCommand, CreateCommandOption,
+    CreateEmbed, CreateEmbedFooter, CreateInteractionResponse, CreateInteractionResponseMessage,
+};
 
 pub fn register() -> CreateCommand {
     CreateCommand::new("user")
         .description("จัดการข้อมูลผู้ใช้")
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "info",
-                "ดูข้อมูลของผู้ใช้"
-            )
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "register",
-                "ลงทะเบียนผู้ใช้"
-            )
-        )
-        .add_option(
-            CreateCommandOption::new(
-                CommandOptionType::SubCommand,
-                "update",
-                "อัพเดทข้อมูลผู้ใช้"
-            )
-        )
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "info",
+            "ดูข้อมูลของผู้ใช้",
+        ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "register",
+            "ลงทะเบียนผู้ใช้",
+        ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "update",
+            "อัพเดทข้อมูลผู้ใช้",
+        ))
 }
 
 // UI Utility Function
@@ -47,14 +39,16 @@ pub async fn show_user_info_ui(
         .color(color)
         .footer(CreateEmbedFooter::new("ระบบจัดการผู้ใช้"));
 
-    command.create_response(
-        &ctx.http,
-        CreateInteractionResponse::Message(
-            CreateInteractionResponseMessage::new()
-                .embed(embed)
-                .ephemeral(true)
+    command
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Message(
+                CreateInteractionResponseMessage::new()
+                    .embed(embed)
+                    .ephemeral(true),
+            ),
         )
-    ).await
+        .await
 }
 
 // Modified register_user function
@@ -63,13 +57,23 @@ async fn register_user(ctx: &Context, command: &CommandInteraction) -> serenity:
     let user_id: String = command.user.id.to_string();
     let user_name: String = command.user.name.clone();
     let global_name: String = command.user.global_name.clone().unwrap_or_default();
-    
-    let guild: serenity::all::PartialGuild = command.guild_id.unwrap().to_partial_guild(&ctx.http).await.unwrap();
+
+    let guild: serenity::all::PartialGuild = command
+        .guild_id
+        .unwrap()
+        .to_partial_guild(&ctx.http)
+        .await
+        .unwrap();
     let guild_name: String = guild.name.clone();
-    
-    let member: serenity::all::Member = command.guild_id.unwrap().member(&ctx.http, command.user.id).await.unwrap();
+
+    let member: serenity::all::Member = command
+        .guild_id
+        .unwrap()
+        .member(&ctx.http, command.user.id)
+        .await
+        .unwrap();
     let guild_user_nickname: &String = member.nick.as_ref().unwrap_or(&member.user.name);
-    
+
     match UserService::check_user_exists(&user_id, &guild_id).await {
         Ok(true) => {
             show_user_info_ui(
@@ -78,10 +82,20 @@ async fn register_user(ctx: &Context, command: &CommandInteraction) -> serenity:
                 "การลงทะเบียน",
                 &format!("ผู้ใช้ {} ได้ลงทะเบียนไว้แล้ว", guild_user_nickname),
                 Colour::GOLD,
-            ).await
-        },
+            )
+            .await
+        }
         Ok(false) => {
-            match UserService::register_user(&guild_id, &user_id, &guild_name, &guild_user_nickname, &global_name, &user_name).await {
+            match UserService::register_user(
+                &guild_id,
+                &user_id,
+                &guild_name,
+                &guild_user_nickname,
+                &global_name,
+                &user_name,
+            )
+            .await
+            {
                 Ok(_) => {
                     show_user_info_ui(
                         command,
@@ -89,8 +103,9 @@ async fn register_user(ctx: &Context, command: &CommandInteraction) -> serenity:
                         "การลงทะเบียนสำเร็จ",
                         &format!("ลงทะเบียนผู้ใช้ {} สำเร็จ", guild_user_nickname),
                         Colour::DARK_GREEN,
-                    ).await
-                },
+                    )
+                    .await
+                }
                 Err(e) => {
                     show_user_info_ui(
                         command,
@@ -98,10 +113,11 @@ async fn register_user(ctx: &Context, command: &CommandInteraction) -> serenity:
                         "เกิดข้อผิดพลาด",
                         &format!("เกิดข้อผิดพลาด: {}", e),
                         Colour::RED,
-                    ).await
+                    )
+                    .await
                 }
             }
-        },
+        }
         Err(e) => {
             show_user_info_ui(
                 command,
@@ -109,7 +125,8 @@ async fn register_user(ctx: &Context, command: &CommandInteraction) -> serenity:
                 "เกิดข้อผิดพลาด",
                 &format!("เกิดข้อผิดพลาดในการตรวจสอบข้อมูลผู้ใช้: {}", e),
                 Colour::RED,
-            ).await
+            )
+            .await
         }
     }
 }
@@ -131,26 +148,16 @@ async fn get_user_info(ctx: &Context, command: &CommandInteraction) -> serenity:
                 user.global_name,
                 user.guild_user_nickname,
                 user.guild_name,
-                chrono::DateTime::<chrono::Utc>::from(user.created_at.to_system_time()).format("%d/%m/%Y %H:%M:%S").to_string()
+                chrono::DateTime::<chrono::Utc>::from(user.created_at.to_system_time())
+                    .format("%d/%m/%Y %H:%M:%S")
+                    .to_string()
             );
 
-            show_user_info_ui(
-                command,
-                ctx,
-                "ข้อมูลผู้ใช้",
-                &description,
-                Colour::BLUE,
-            ).await
-        },
+            show_user_info_ui(command, ctx, "ข้อมูลผู้ใช้", &description, Colour::BLUE).await
+        }
         Ok(None) => {
-            show_user_info_ui(
-                command,
-                ctx,
-                "ไม่พบข้อมูล",
-                "ไม่พบข้อมูลผู้ใช้ในระบบ",
-                Colour::RED,
-            ).await
-        },
+            show_user_info_ui(command, ctx, "ไม่พบข้อมูล", "ไม่พบข้อมูลผู้ใช้ในระบบ", Colour::RED).await
+        }
         Err(e) => {
             show_user_info_ui(
                 command,
@@ -158,7 +165,8 @@ async fn get_user_info(ctx: &Context, command: &CommandInteraction) -> serenity:
                 "เกิดข้อผิดพลาด",
                 &format!("เกิดข้อผิดพลาด: {}", e),
                 Colour::RED,
-            ).await
+            )
+            .await
         }
     }
 }
@@ -167,13 +175,22 @@ async fn get_user_info(ctx: &Context, command: &CommandInteraction) -> serenity:
 async fn update_user(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
     let guild_id: String = command.guild_id.unwrap().to_string();
     let user_id: String = command.user.id.to_string();
-    
+
     // ดึงข้อมูลล่าสุดจาก Discord
-    let member: serenity::all::Member = command.guild_id.unwrap().member(&ctx.http, command.user.id).await.unwrap();
-    let guild_user_nickname: String = member.nick.as_ref().unwrap_or(&member.user.name).to_string();
+    let member: serenity::all::Member = command
+        .guild_id
+        .unwrap()
+        .member(&ctx.http, command.user.id)
+        .await
+        .unwrap();
+    let guild_user_nickname: String = member
+        .nick
+        .as_ref()
+        .unwrap_or(&member.user.name)
+        .to_string();
     let global_name: String = command.user.global_name.clone().unwrap_or_default();
     let user_name: String = command.user.name.clone();
-    
+
     // ตรวจสอบว่าผู้ใช้มีอยู่ในระบบหรือไม่
     match UserService::find_by_user_id(&user_id, &guild_id).await {
         Ok(Some(mut user)) => {
@@ -181,7 +198,7 @@ async fn update_user(ctx: &Context, command: &CommandInteraction) -> serenity::R
             user.guild_user_nickname = guild_user_nickname;
             user.global_name = global_name;
             user.user_name = user_name;
-            
+
             // บันทึกข้อมูลลงฐานข้อมูล
             match UserService::update_user(&user).await {
                 Ok(_) => {
@@ -196,17 +213,20 @@ async fn update_user(ctx: &Context, command: &CommandInteraction) -> serenity::R
                         user.global_name,
                         user.guild_user_nickname,
                         user.guild_name,
-                        chrono::DateTime::<chrono::Utc>::from(user.updated_at.to_system_time()).format("%d/%m/%Y %H:%M:%S").to_string()
+                        chrono::DateTime::<chrono::Utc>::from(user.updated_at.to_system_time())
+                            .format("%d/%m/%Y %H:%M:%S")
+                            .to_string()
                     );
-                    
+
                     show_user_info_ui(
                         command,
                         ctx,
                         "อัพเดทข้อมูลสำเร็จ",
                         &description,
                         Colour::DARK_GREEN,
-                    ).await
-                },
+                    )
+                    .await
+                }
                 Err(e) => {
                     show_user_info_ui(
                         command,
@@ -214,10 +234,11 @@ async fn update_user(ctx: &Context, command: &CommandInteraction) -> serenity::R
                         "เกิดข้อผิดพลาด",
                         &format!("เกิดข้อผิดพลาดในการอัพเดทข้อมูล: {}", e),
                         Colour::RED,
-                    ).await
+                    )
+                    .await
                 }
             }
-        },
+        }
         Ok(None) => {
             show_user_info_ui(
                 command,
@@ -225,8 +246,9 @@ async fn update_user(ctx: &Context, command: &CommandInteraction) -> serenity::R
                 "ไม่พบข้อมูล",
                 "ไม่พบข้อมูลผู้ใช้ในระบบ กรุณาลงทะเบียนก่อน",
                 Colour::RED,
-            ).await
-        },
+            )
+            .await
+        }
         Err(e) => {
             show_user_info_ui(
                 command,
@@ -234,7 +256,8 @@ async fn update_user(ctx: &Context, command: &CommandInteraction) -> serenity::R
                 "เกิดข้อผิดพลาด",
                 &format!("เกิดข้อผิดพลาดในการค้นหาข้อมูลผู้ใช้: {}", e),
                 Colour::RED,
-            ).await
+            )
+            .await
         }
     }
 }
@@ -243,23 +266,15 @@ async fn update_user(ctx: &Context, command: &CommandInteraction) -> serenity::R
 pub async fn run(
     ctx: &Context,
     command: &CommandInteraction,
-    _: &serenity::prelude::TypeMap
+    _: &serenity::prelude::TypeMap,
 ) -> serenity::Result<()> {
     let subcommand: &serenity::all::CommandDataOption = command.data.options.first().unwrap();
     let subcommand_name: &String = &subcommand.name;
-    
+
     match subcommand_name.as_str() {
         "info" => get_user_info(ctx, command).await,
         "register" => register_user(ctx, command).await,
         "update" => update_user(ctx, command).await,
-        _ => {
-            show_user_info_ui(
-                command,
-                ctx,
-                "ไม่รู้จักคำสั่ง",
-                "ไม่รู้จักคำสั่งย่อยนี้",
-                Colour::RED,
-            ).await
-        }
+        _ => show_user_info_ui(command, ctx, "ไม่รู้จักคำสั่ง", "ไม่รู้จักคำสั่งย่อยนี้", Colour::RED).await,
     }
 }

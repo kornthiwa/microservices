@@ -5,13 +5,15 @@ edition = "2021"
 
 [dependencies]
 dotenv = "0.15.0"
-serde = "1.0.188"
-futures = "0.3.28"
-tokio = {version = "1.32.0", features = ["full"]}
-chrono = { version = "0.4", features = ["unstable-locales", "serde"] }
+serde = "1.0.197"
+futures = "0.3.30"
+tokio = {version = "1.36.0", features = ["full"]}
+chrono = { version = "0.4.34", features = ["unstable-locales", "serde"] }
 serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "framework"] }
-reqwest = { version = "0.11", features = ["json"] }
-scraper = "0.17"
+reqwest = { version = "0.11.24", features = ["json"] }
+scraper = "0.18.1"
+brotli = "3.4.0"
+playwright = "0.0.20"
 
 [dependencies.mongodb]
 version = "3.2.3"
