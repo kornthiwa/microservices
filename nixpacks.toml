@@ -1,0 +1,8 @@
+   [phases.setup]
+   nixPkgs = ["rustc", "cargo", "pkg-config", "openssl"]
+
+   [phases.build]
+   cmds = ["cd rust-services && cargo build --release"]
+
+   [start]
+   cmd = "cd rust-services && ./target/release/rust-services"
