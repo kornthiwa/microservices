@@ -28,8 +28,6 @@ pub async fn init() -> mongodb::error::Result<()> {
     let db_name: String =
         std::env::var("MONGO_DB_NAME").unwrap_or_else(|_| "discord_bot".to_string());
 
-    println!("กำลังเชื่อมต่อ MongoDB ที่: {}", mongo_uri);
-
     let mut options: ClientOptions = ClientOptions::parse(&mongo_uri).await?;
     options.max_pool_size = Some(100);
     options.min_pool_size = Some(5);
@@ -53,7 +51,6 @@ pub async fn init() -> mongodb::error::Result<()> {
     };
 
     MONGO.set(pool).unwrap();
-    println!("เชื่อมต่อ MongoDB สำเร็จ");
     Ok(())
 }
 

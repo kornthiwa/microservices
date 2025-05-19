@@ -71,7 +71,7 @@ impl EventHandler for Handlers {
 
         tokio::spawn(async move {
             let auto_manga: AutoMangaCommands = AutoMangaCommands::new();
-            auto_manga.run_test_update(&ctx_clone).await;
+            auto_manga.run_periodic_update(&ctx_clone).await;
         });
     }
 }
