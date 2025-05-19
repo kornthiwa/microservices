@@ -1,16 +1,31 @@
-# ===== STAGE 1: Build Rust binary =====
-FROM rust:1.82.0 as builder
+# Build stage
+FROM rust:1.75-slim-bullseye as builder
 
-WORKDIR /app
-COPY rust-services ./rust-services
-WORKDIR /app/rust-services
+# Install required dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a new empty shell project
+WORKDIR /usr/src/app
+COPY . .
+
+# Build for release
 RUN cargo build --release
 
-# ===== STAGE 2: Minimal image to run =====
-FROM debian:buster-slim
+# Runtime stage
+FROM debian:bullseye-slim
 
-# นำ binary มาใส่ใน image สุดท้าย
-COPY --from=builder /app/rust-services/target/release/rust-services /usr/local/bin/rust-services
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl1.1 \
+    && rm -rf /var/lib/apt/lists/*
 
-# รัน binary เมื่อ container start
+# Copy the build artifact from the builder stage
+COPY --from=builder /usr/src/app/target/release/rust-services /usr/local/bin/rust-services
+
+# Set the startup command
 CMD ["rust-services"]
