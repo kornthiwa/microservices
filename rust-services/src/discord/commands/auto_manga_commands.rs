@@ -144,6 +144,7 @@ impl AutoMangaCommands {
         }
     }
 
+    
     // ฟังก์ชันสำหรับทดสอบการอัพเดท (ทุก 10 วินาที)
     // pub async fn run_test_update(&self, ctx: &Context) {
     //     println!("เริ่มการทดสอบการอัพเดท...");
