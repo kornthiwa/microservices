@@ -1,5 +1,6 @@
    [phases.setup]
    nixPkgs = ["rustc", "cargo", "pkg-config", "openssl"]
+   rustVersion = "1.72.0"
 
    [phases.build]
    cmds = [
