@@ -9,7 +9,7 @@ pub fn register() -> CreateCommand {
     CreateCommand::new("channel")
         .description("จัดการช่อง")
         .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, "save", "บันทึกข้อมูลช่อง")
+            CreateCommandOption::new(CommandOptionType::SubCommand, "add", "บันทึกข้อมูลช่อง")
                 .add_sub_option(
                     CreateCommandOption::new(
                         CommandOptionType::Channel,
@@ -96,12 +96,12 @@ async fn list_channels(ctx: &Context, command: &CommandInteraction) -> serenity:
     }
 }
 
-async fn save_channel(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
+async fn add_channel(ctx: &Context, command: &CommandInteraction) -> serenity::Result<()> {
     let channel_id = command
         .data
         .options
         .iter()
-        .find(|opt| opt.name == "save")
+        .find(|opt| opt.name == "add")
         .and_then(|opt| match &opt.value {
             serenity::all::CommandDataOptionValue::SubCommand(sub_opts) => Some(sub_opts),
             _ => None,
@@ -117,33 +117,75 @@ async fn save_channel(ctx: &Context, command: &CommandInteraction) -> serenity::
     match channel_id.to_channel(&ctx.http).await {
         Ok(channel) => {
             if let serenity::model::channel::Channel::Guild(channel) = channel {
-                let channel_doc = Channel::new(
+                let existing_channels: Vec<Channel> = match ChannelsService::get_channels_by_guild(&guild_id.to_string()).await {
+                    Ok(channels) => channels,
+                    Err(e) => {
+                        return show_channel_info_ui(
+                            command,
+                            ctx,
+                            "เกิดข้อผิดพลาด",
+                            &format!("เกิดข้อผิดพลาดในการดึงข้อมูล: {}", e),
+                            Colour::RED,
+                        )
+                        .await;
+                    }
+                };
+                println!("existing_channels: {:?}", existing_channels);
+                
+                let channel_doc: Channel = Channel::new(
                     channel.id.to_string(),
                     guild_id.to_string(),
                     channel.name.clone(),
                     guild_name.clone(),
                 );
 
-                match ChannelsService::create_channel(channel_doc).await {
-                    Ok(_) => {
-                        show_channel_info_ui(
-                            command,
-                            ctx,
-                            "บันทึกข้อมูลสำเร็จ",
-                            &format!("บันทึกข้อมูลช่อง {} ลงฐานข้อมูลสำเร็จ", channel.name),
-                            Colour::DARK_GREEN,
-                        )
-                        .await
+                if existing_channels.iter().any(|c: &Channel| c.guild_id == guild_id.to_string()) {
+                    // Update existing channel
+                    match ChannelsService::update_channel(&channel_doc).await {
+                        Ok(_) => {
+                            show_channel_info_ui(
+                                command,
+                                ctx,
+                                "อัพเดทข้อมูลสำเร็จ",
+                                &format!("อัพเดทข้อมูลช่อง {} ลงฐานข้อมูลสำเร็จ", channel.name),
+                                Colour::DARK_GREEN,
+                            )
+                            .await
+                        }
+                        Err(e) => {
+                            show_channel_info_ui(
+                                command,
+                                ctx,
+                                "เกิดข้อผิดพลาด",
+                                &format!("เกิดข้อผิดพลาดในการอัพเดทข้อมูล: {}", e),
+                                Colour::RED,
+                            )
+                            .await
+                        }
                     }
-                    Err(e) => {
-                        show_channel_info_ui(
-                            command,
-                            ctx,
-                            "เกิดข้อผิดพลาด",
-                            &format!("เกิดข้อผิดพลาดในการบันทึกข้อมูล: {}", e),
-                            Colour::RED,
-                        )
-                        .await
+                } else {
+                    // Create new channel
+                    match ChannelsService::create_channel(channel_doc).await {
+                        Ok(_) => {
+                            show_channel_info_ui(
+                                command,
+                                ctx,
+                                "เพิ่มข้อมูลสำเร็จ",
+                                &format!("เพิ่มข้อมูลช่อง {} ลงฐานข้อมูลสำเร็จ", channel.name),
+                                Colour::DARK_GREEN,
+                            )
+                            .await
+                        }
+                        Err(e) => {
+                            show_channel_info_ui(
+                                command,
+                                ctx,
+                                "เกิดข้อผิดพลาด",
+                                &format!("เกิดข้อผิดพลาดในการบันทึกข้อมูล: {}", e),
+                                Colour::RED,
+                            )
+                            .await
+                        }
                     }
                 }
             } else {
@@ -179,7 +221,7 @@ pub async fn run(
     let subcommand_name = &subcommand.name;
 
     match subcommand_name.as_str() {
-        "save" => save_channel(ctx, command).await,
+        "add" => add_channel(ctx, command).await,
         "list" => list_channels(ctx, command).await,
         _ => show_channel_info_ui(command, ctx, "ไม่รู้จักคำสั่ง", "ไม่รู้จักคำสั่งย่อยนี้", Colour::RED).await,
     }

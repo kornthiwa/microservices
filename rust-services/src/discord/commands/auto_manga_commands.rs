@@ -2,7 +2,6 @@ use crate::discord::commands::scrape_manga_commands::scrape_manga_sing_manga;
 use crate::models::manga::Manga;
 use crate::service::channels_service::ChannelsService;
 use crate::service::manga_service::MangaService;
-use mongodb::bson::doc;
 use serenity::all::{ChannelId, Colour, Context, CreateEmbed, CreateEmbedFooter, CreateMessage};
 use tokio::time;
 
@@ -17,31 +16,24 @@ impl AutoMangaCommands {
     // ส่งข้อความอัพเดทไปยังช่องที่กำหนด
     async fn send_update_to_all_channels(ctx: &Context, mangas: Vec<Manga>) {
         // ดึงข้อมูลช่อง
-        let channels_collection = ChannelsService::get_collection().await;
-        let mut cursor = match channels_collection.find(doc! {}).await {
-            Ok(cursor) => cursor,
+        let channels: Vec<crate::models::channels::Channel> = match ChannelsService::get_all_channels().await {
+            Ok(channels) => channels,
             Err(e) => {
                 println!("เกิดข้อผิดพลาดในการดึง channels: {:?}", e);
                 return;
             }
         };
 
-        let mut channel_ids = Vec::new();
-        while let Ok(has_next) = cursor.advance().await {
-            if !has_next {
-                break;
-            }
-            if let Ok(channel) = cursor.deserialize_current() {
-                if let Ok(id) = channel.channel_id.parse::<u64>() {
-                    channel_ids.push(ChannelId::new(id));
-                }
-            }
-        }
+        let channel_ids: Vec<ChannelId> = channels
+            .into_iter()
+            .filter_map(|channel| channel.channel_id.parse::<u64>().ok().map(ChannelId::new))
+            .collect();
 
         if channel_ids.is_empty() {
             println!("ไม่พบช่องสำหรับการอัพเดทมังงะในฐานข้อมูล");
             return;
         }
+        println!("channel_ids: {:?}", channel_ids);
 
         // ส่งข้อมูลทุกมังงะ
         for manga in mangas {
