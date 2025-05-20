@@ -9,7 +9,7 @@ pub fn register() -> CreateCommand {
     CreateCommand::new("channel")
         .description("จัดการช่อง")
         .add_option(
-            CreateCommandOption::new(CommandOptionType::SubCommand, "add", "บันทึกข้อมูลช่อง")
+            CreateCommandOption::new(CommandOptionType::SubCommand, "register", "บันทึกข้อมูลช่อง")
                 .add_sub_option(
                     CreateCommandOption::new(
                         CommandOptionType::Channel,
@@ -101,7 +101,7 @@ async fn add_channel(ctx: &Context, command: &CommandInteraction) -> serenity::R
         .data
         .options
         .iter()
-        .find(|opt| opt.name == "add")
+        .find(|opt| opt.name == "register")
         .and_then(|opt| match &opt.value {
             serenity::all::CommandDataOptionValue::SubCommand(sub_opts) => Some(sub_opts),
             _ => None,
@@ -221,7 +221,7 @@ pub async fn run(
     let subcommand_name = &subcommand.name;
 
     match subcommand_name.as_str() {
-        "add" => add_channel(ctx, command).await,
+        "register" => add_channel(ctx, command).await,
         "list" => list_channels(ctx, command).await,
         _ => show_channel_info_ui(command, ctx, "ไม่รู้จักคำสั่ง", "ไม่รู้จักคำสั่งย่อยนี้", Colour::RED).await,
     }
