@@ -12,23 +12,11 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy dependency files first for better layer caching
-# This allows Docker to cache the dependency compilation layer
-COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
-
-# Create a dummy main.rs to build dependencies
-# This step will be cached unless Cargo.toml changes
-RUN mkdir -p src && \
-    echo "fn main() {}" > src/main.rs && \
-    cargo build --release && \
-    rm -rf src
-
-# Copy all remaining files (including src directory)
-# This layer will only rebuild when source code changes
+# Copy everything at once (simple and reliable)
+# This ensures all files are available
 COPY . .
 
-# Build final binary with optimizations
-# Dependencies are already compiled, so this is faster
+# Build for release with optimizations
 RUN cargo build --release && \
     strip target/release/rust-services
 
