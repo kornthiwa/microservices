@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.87-slim AS builder
+FROM rust:1.88-slim AS builder
 
 # Install required dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,16 +13,16 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /usr/src/app
 
 # Copy dependency files first for better layer caching
-COPY Cargo.toml Cargo.lock ./
-COPY rust-toolchain.toml ./
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
 
-# Create a dummy src directory to build dependencies
-RUN mkdir src && \
+# Create a dummy src directory to build dependencies first
+# This allows Docker to cache the dependency layer
+RUN mkdir -p src && \
     echo "fn main() {}" > src/main.rs && \
     cargo build --release && \
     rm -rf src
 
-# Copy source code
+# Copy source code after dependencies are built
 COPY src ./src
 
 # Build for release with optimizations

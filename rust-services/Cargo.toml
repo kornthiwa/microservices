@@ -2,7 +2,7 @@
 name = "rust-services"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.87"
+rust-version = "1.88"
 authors = ["Your Name <your.email@example.com>"]
 description = "Discord bot service built with Rust"
 license = "MIT"
