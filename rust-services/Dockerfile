@@ -1,7 +1,7 @@
-# Build stage
+# ขั้นตอน Build
 FROM rust:1.88-slim AS builder
 
-# Install required build dependencies
+# ติดตั้ง dependencies ที่จำเป็นสำหรับ build
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
@@ -9,14 +9,14 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# ตั้ง working directory
 WORKDIR /usr/src/app
 
-# Copy everything from rust-services directory
-# Railway build context is root of repo, so files are in rust-services/
+# Copy ทุกอย่างจาก rust-services directory
+# Railway build context เป็น root ของ repo ดังนั้นไฟล์อยู่ใน rust-services/
 COPY rust-services/ .
 
-# Debug: Verify files are copied - show everything
+# Debug: ตรวจสอบว่าไฟล์ถูก copy หรือไม่ - แสดงทุกอย่าง
 RUN echo "=== Debug: Current directory ===" && \
     pwd && \
     echo "=== Debug: Listing ALL files ===" && \
@@ -28,40 +28,36 @@ RUN echo "=== Debug: Current directory ===" && \
     echo "=== Debug: All .toml files ===" && \
     find . -name "*.toml" -type f 2>/dev/null || echo "No .toml files found"
 
-# Build for release with optimizations
+# Build สำหรับ release พร้อม optimizations
 RUN cargo build --release && \
     strip target/release/rust-services
 
-# Runtime stage - minimal image
+# ขั้นตอน Runtime - image ขนาดเล็ก
 FROM debian:bookworm-slim
 
-# Install only runtime dependencies
+# ติดตั้งเฉพาะ runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Create non-root user for security best practices
+# สร้าง non-root user เพื่อความปลอดภัย
 RUN groupadd -r appuser && \
     useradd -r -g appuser appuser
 
-# Copy the build artifact from the builder stage
+# Copy binary ที่ build แล้วจาก builder stage
 COPY --from=builder /usr/src/app/target/release/rust-services /usr/local/bin/rust-services
 
-# Set proper ownership and permissions
+# ตั้ง ownership และ permissions
 RUN chown appuser:appuser /usr/local/bin/rust-services && \
     chmod +x /usr/local/bin/rust-services
 
-# Switch to non-root user
+# เปลี่ยนเป็น non-root user
 USER appuser
 
-# Set working directory (optional, for consistency)
+# ตั้ง working directory (optional - เพื่อความสอดคล้อง)
 WORKDIR /home/appuser
 
-# Health check (optional - uncomment if needed)
-# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-#   CMD pgrep rust-services || exit 1
-
-# Set the startup command
+# ตั้งคำสั่งเริ่มต้น
 CMD ["rust-services"]
