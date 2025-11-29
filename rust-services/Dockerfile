@@ -16,6 +16,14 @@ WORKDIR /usr/src/app
 # This ensures all files are available
 COPY . .
 
+# Debug: Verify files are copied
+RUN echo "=== Debug: Listing files ===" && \
+    ls -la && \
+    echo "=== Checking for Cargo.toml ===" && \
+    test -f Cargo.toml && echo "✓ Cargo.toml found" || (echo "✗ Cargo.toml NOT FOUND" && ls -la *.toml 2>/dev/null || echo "No .toml files found") && \
+    echo "=== Checking for src directory ===" && \
+    test -d src && echo "✓ src directory found" || echo "✗ src directory NOT FOUND"
+
 # Build for release with optimizations
 RUN cargo build --release && \
     strip target/release/rust-services
@@ -32,7 +40,7 @@ RUN apt-get update && apt-get install -y \
 
 # Create non-root user for security best practices
 RUN groupadd -r appuser && \
-    useradd -r -g appuser -u 1000 appuser
+    useradd -r -g appuser appuser
 
 # Copy the build artifact from the builder stage
 COPY --from=builder /usr/src/app/target/release/rust-services /usr/local/bin/rust-services
