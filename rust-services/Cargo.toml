@@ -2,18 +2,28 @@
 name = "rust-services"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.80"
+authors = ["Your Name <your.email@example.com>"]
+description = "Discord bot service built with Rust"
+license = "MIT"
+repository = "https://github.com/yourusername/microservices"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
 
 [dependencies]
-dotenv = "0.15.0"
-serde = "1.0.197"
-futures = "0.3.30"
-tokio = {version = "1.36.0", features = ["full"]}
-chrono = { version = "0.4.34", features = ["unstable-locales", "serde"] }
+dotenv = "0.15"
+serde = { version = "1.0", features = ["derive"] }
+futures = "0.3"
+tokio = { version = "1.40", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
 serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "framework"] }
-reqwest = { version = "0.11.24", features = ["json"] }
-scraper = "0.18.1"
-brotli = "3.4.0"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+scraper = "0.20"
+brotli = "3.4"
 playwright = "0.0.20"
-
-[dependencies.mongodb]
-version = "3.2.3"
+mongodb = "3.2"
