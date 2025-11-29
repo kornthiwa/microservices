@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.80-slim-bullseye as builder
+FROM rust:1.80-slim as builder
 
 # Install required dependencies
 RUN apt-get update && apt-get install -y \
@@ -16,12 +16,12 @@ COPY . .
 RUN cargo build --release
 
 # Runtime stage
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    libssl1.1 \
+    libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the build artifact from the builder stage
