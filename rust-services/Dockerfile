@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.87-slim-bullseye as builder
+FROM rust:1.88-slim-bullseye as builder
 
 # Install required dependencies
 RUN apt-get update && apt-get install -y \
