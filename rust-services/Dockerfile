@@ -16,13 +16,17 @@ WORKDIR /usr/src/app
 # This ensures all files are available
 COPY . .
 
-# Debug: Verify files are copied
-RUN echo "=== Debug: Listing files ===" && \
-    ls -la && \
-    echo "=== Checking for Cargo.toml ===" && \
-    test -f Cargo.toml && echo "✓ Cargo.toml found" || (echo "✗ Cargo.toml NOT FOUND" && ls -la *.toml 2>/dev/null || echo "No .toml files found") && \
-    echo "=== Checking for src directory ===" && \
-    test -d src && echo "✓ src directory found" || echo "✗ src directory NOT FOUND"
+# Debug: Verify files are copied - show everything
+RUN echo "=== Debug: Current directory ===" && \
+    pwd && \
+    echo "=== Debug: Listing ALL files ===" && \
+    ls -laR . 2>&1 | head -50 && \
+    echo "=== Debug: Checking for Cargo.toml ===" && \
+    find . -name "Cargo.toml" -type f 2>/dev/null || echo "Cargo.toml NOT FOUND" && \
+    echo "=== Debug: Checking for src directory ===" && \
+    find . -type d -name "src" 2>/dev/null || echo "src directory NOT FOUND" && \
+    echo "=== Debug: All .toml files ===" && \
+    find . -name "*.toml" -type f 2>/dev/null || echo "No .toml files found"
 
 # Build for release with optimizations
 RUN cargo build --release && \
