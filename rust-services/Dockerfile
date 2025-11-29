@@ -12,9 +12,9 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy everything at once (simple and reliable)
-# This ensures all files are available
-COPY . .
+# Copy everything from rust-services directory
+# Railway build context is root of repo, so files are in rust-services/
+COPY rust-services/ .
 
 # Debug: Verify files are copied - show everything
 RUN echo "=== Debug: Current directory ===" && \
