@@ -1,4 +1,4 @@
-use crate::discord::commands::scrape_manga_commands::scrape_manga_auto;
+use crate::discord::commands::scrape_manga_commands::scrape_manga_sing_manga;
 use crate::models::manga::Manga;
 use crate::service::channels_service::ChannelsService;
 use crate::service::manga_service::MangaService;
@@ -82,46 +82,49 @@ impl AutoMangaCommands {
             match MangaService::get_all().await {
                 Ok(mangas) => {
                     for manga in mangas {
-                        // เช็คอัพเดทจากเว็บไซต์โดยใช้ฟังก์ชัน auto-detection
-                        match scrape_manga_auto(&manga.url).await {
-                            Ok((title, latest_chapter, chapter_url, image_url)) => {
-                                // ถ้าตอนล่าสุดใหม่กว่าในฐานข้อมูล
-                                if latest_chapter > manga.latest_chapter {
-                                    println!(
-                                        "พบการอัพเดทใหม่สำหรับ {}: ตอนที่ {}",
-                                        title, latest_chapter
-                                    );
+                        // เช็คว่าเป็น URL ของ sing-manga.com หรือไม่
+                        if manga.url.contains("sing-manga.com") {
+                            // เช็คอัพเดทจากเว็บไซต์
+                            match scrape_manga_sing_manga(&manga.url).await {
+                                Ok((title, latest_chapter, chapter_url, image_url)) => {
+                                    // ถ้าตอนล่าสุดใหม่กว่าในฐานข้อมูล
+                                    if latest_chapter > manga.latest_chapter {
+                                        println!(
+                                            "พบการอัพเดทใหม่สำหรับ {}: ตอนที่ {}",
+                                            title, latest_chapter
+                                        );
 
-                                    // สร้างข้อมูลมังงะใหม่
-                                    let updated_manga = Manga::new(
-                                        title,
-                                        manga.url,
-                                        latest_chapter,
-                                        chapter_url,
-                                        image_url,
-                                    );
+                                        // สร้างข้อมูลมังงะใหม่
+                                        let updated_manga = Manga::new(
+                                            title,
+                                            manga.url,
+                                            latest_chapter,
+                                            chapter_url,
+                                            image_url,
+                                        );
 
-                                    // อัพเดทข้อมูลในฐานข้อมูล
-                                    if let Err(e) = MangaService::update(&updated_manga).await {
-                                        println!("เกิดข้อผิดพลาดในการอัพเดทข้อมูลมังงะ: {:?}", e);
-                                        continue;
+                                        // อัพเดทข้อมูลในฐานข้อมูล
+                                        if let Err(e) = MangaService::update(&updated_manga).await {
+                                            println!("เกิดข้อผิดพลาดในการอัพเดทข้อมูลมังงะ: {:?}", e);
+                                            continue;
+                                        }
+
+                                        // ส่งการแจ้งเตือน
+                                        Self::send_update_to_all_channels(ctx, vec![updated_manga])
+                                            .await;
+                                    } else {
+                                        println!(
+                                            "{} ยังไม่มีการอัพเดทใหม่ (ตอนล่าสุด: {})",
+                                            title, manga.latest_chapter
+                                        );
                                     }
-
-                                    // ส่งการแจ้งเตือน
-                                    Self::send_update_to_all_channels(ctx, vec![updated_manga])
-                                        .await;
-                                } else {
+                                }
+                                Err(e) => {
                                     println!(
-                                        "{} ยังไม่มีการอัพเดทใหม่ (ตอนล่าสุด: {})",
-                                        title, manga.latest_chapter
+                                        "เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?}",
+                                        manga.title, e
                                     );
                                 }
-                            }
-                            Err(e) => {
-                                println!(
-                                    "เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?}",
-                                    manga.title, e
-                                );
                             }
                         }
                     }
@@ -133,6 +136,7 @@ impl AutoMangaCommands {
         }
     }
 
+    
     // ฟังก์ชันสำหรับทดสอบการอัพเดท (ทุก 10 วินาที)
     // pub async fn run_test_update(&self, ctx: &Context) {
     //     println!("เริ่มการทดสอบการอัพเดท...");
@@ -142,47 +146,48 @@ impl AutoMangaCommands {
     //     match MangaService::get_all().await {
     //         Ok(mangas) => {
     //             for manga in mangas {
-    //                 // ใช้ฟังก์ชัน auto-detection สำหรับทุกเว็บไซต์
-    //                 match scrape_manga_auto(&manga.url).await {
-    //                     Ok((title, latest_chapter, chapter_url, image_url)) => {
-    //                         // เช็คว่าตอนที่ดึงมาใหม่กว่าในฐานข้อมูลหรือไม่
-    //                         if latest_chapter > manga.latest_chapter {
-    //                             println!(
-    //                                 "Test Scrape: {} ตอนที่ {} url: {}",
-    //                                 title, latest_chapter, chapter_url
-    //                             );
-    //                             println!(
-    //                                 "พบการอัพเดทใหม่! (ตอนเดิม: {}, ตอนใหม่: {})",
-    //                                 manga.latest_chapter, latest_chapter
-    //                             );
+    //                 if manga.url.contains("sing-manga.com") {
+    //                     match scrape_manga_sing_manga(&manga.url).await {
+    //                         Ok((title, latest_chapter, chapter_url, image_url)) => {
+    //                             // เช็คว่าตอนที่ดึงมาใหม่กว่าในฐานข้อมูลหรือไม่
+    //                             if latest_chapter > manga.latest_chapter {
+    //                                 println!(
+    //                                     "Test Scrape: {} ตอนที่ {} url: {}",
+    //                                     title, latest_chapter, chapter_url
+    //                                 );
+    //                                 println!(
+    //                                     "พบการอัพเดทใหม่! (ตอนเดิม: {}, ตอนใหม่: {})",
+    //                                     manga.latest_chapter, latest_chapter
+    //                                 );
 
-    //                             // สร้างข้อมูลมังงะใหม่
-    //                             let updated_manga = Manga::new(
-    //                                 title,
-    //                                 manga.url,
-    //                                 latest_chapter,
-    //                                 chapter_url,
-    //                                 image_url,
-    //                             );
+    //                                 // สร้างข้อมูลมังงะใหม่
+    //                                 let updated_manga = Manga::new(
+    //                                     title,
+    //                                     manga.url,
+    //                                     latest_chapter,
+    //                                     chapter_url,
+    //                                     image_url,
+    //                                 );
 
-    //                             // อัพเดทข้อมูลในฐานข้อมูล
-    //                             if let Err(e) = MangaService::update(&updated_manga).await {
-    //                                 println!("เกิดข้อผิดพลาดในการอัพเดทข้อมูลมังงะ: {:?}", e);
-    //                                 continue;
+    //                                 // อัพเดทข้อมูลในฐานข้อมูล
+    //                                 if let Err(e) = MangaService::update(&updated_manga).await {
+    //                                     println!("เกิดข้อผิดพลาดในการอัพเดทข้อมูลมังงะ: {:?}", e);
+    //                                     continue;
+    //                                 }
+
+    //                                 // ส่งแจ้งเตือนไปยังทุกช่อง
+    //                                 Self::send_update_to_all_channels(ctx, vec![updated_manga])
+    //                                     .await;
+    //                             } else {
+    //                                 println!(
+    //                                     "{} ยังไม่มีการอัพเดทใหม่ (ตอนล่าสุด: {})",
+    //                                     title, manga.latest_chapter
+    //                                 );
     //                             }
-
-    //                             // ส่งแจ้งเตือนไปยังทุกช่อง
-    //                             Self::send_update_to_all_channels(ctx, vec![updated_manga])
-    //                                 .await;
-    //                         } else {
-    //                             println!(
-    //                                 "{} ยังไม่มีการอัพเดทใหม่ (ตอนล่าสุด: {})",
-    //                                 title, manga.latest_chapter
-    //                             );
     //                         }
-    //                     }
-    //                     Err(e) => {
-    //                         println!("เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?}", manga.title, e);
+    //                         Err(e) => {
+    //                             println!("เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?}", manga.title, e);
+    //                         }
     //                     }
     //                 }
     //             }
@@ -201,47 +206,48 @@ impl AutoMangaCommands {
     //         match MangaService::get_all().await {
     //             Ok(mangas) => {
     //                 for manga in mangas {
-    //                     // ใช้ฟังก์ชัน auto-detection สำหรับทุกเว็บไซต์
-    //                     match scrape_manga_auto(&manga.url).await {
-    //                         Ok((title, latest_chapter, chapter_url, image_url)) => {
-    //                             // เช็คว่าตอนที่ดึงมาใหม่กว่าในฐานข้อมูลหรือไม่
-    //                             if latest_chapter > manga.latest_chapter {
-    //                                 println!(
-    //                                     "Test Scrape: {} ตอนที่ {} url: {}",
-    //                                     title, latest_chapter, chapter_url
-    //                                 );
-    //                                 println!(
-    //                                     "พบการอัพเดทใหม่! (ตอนเดิม: {}, ตอนใหม่: {})",
-    //                                     manga.latest_chapter, latest_chapter
-    //                                 );
+    //                     if manga.url.contains("sing-manga.com") {
+    //                         match scrape_manga_sing_manga(&manga.url).await {
+    //                             Ok((title, latest_chapter, chapter_url, image_url)) => {
+    //                                 // เช็คว่าตอนที่ดึงมาใหม่กว่าในฐานข้อมูลหรือไม่
+    //                                 if latest_chapter > manga.latest_chapter {
+    //                                     println!(
+    //                                         "Test Scrape: {} ตอนที่ {} url: {}",
+    //                                         title, latest_chapter, chapter_url
+    //                                     );
+    //                                     println!(
+    //                                         "พบการอัพเดทใหม่! (ตอนเดิม: {}, ตอนใหม่: {})",
+    //                                         manga.latest_chapter, latest_chapter
+    //                                     );
 
-    //                                 let updated_manga = Manga::new(
-    //                                     title,
-    //                                     manga.url,
-    //                                     latest_chapter,
-    //                                     chapter_url,
-    //                                     image_url,
-    //                                 );
+    //                                     let updated_manga = Manga::new(
+    //                                         title,
+    //                                         manga.url,
+    //                                         latest_chapter,
+    //                                         chapter_url,
+    //                                         image_url,
+    //                                     );
 
-    //                                 if let Err(e) = MangaService::update(&updated_manga).await {
-    //                                     println!("เกิดข้อผิดพลาดในการอัพเดทข้อมูลมังงะ: {:?}", e);
-    //                                     continue;
+    //                                     if let Err(e) = MangaService::update(&updated_manga).await {
+    //                                         println!("เกิดข้อผิดพลาดในการอัพเดทข้อมูลมังงะ: {:?}", e);
+    //                                         continue;
+    //                                     }
+
+    //                                     Self::send_update_to_all_channels(ctx, vec![updated_manga])
+    //                                         .await;
+    //                                 } else {
+    //                                     println!(
+    //                                         "{} ยังไม่มีการอัพเดทใหม่ (ตอนล่าสุด: {})",
+    //                                         title, manga.latest_chapter
+    //                                     );
     //                                 }
-
-    //                                 Self::send_update_to_all_channels(ctx, vec![updated_manga])
-    //                                     .await;
-    //                             } else {
+    //                             }
+    //                             Err(e) => {
     //                                 println!(
-    //                                     "{} ยังไม่มีการอัพเดทใหม่ (ตอนล่าสุด: {})",
-    //                                     title, manga.latest_chapter
+    //                                     "เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?}",
+    //                                     manga.title, e
     //                                 );
     //                             }
-    //                         }
-    //                         Err(e) => {
-    //                             println!(
-    //                                 "เกิดข้อผิดพลาดในการเช็คอัพเดทมังงะ {}: {:?}",
-    //                                 manga.title, e
-    //                             );
     //                         }
     //                     }
     //                 }

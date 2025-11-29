@@ -76,15 +76,8 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
         .await;
     }
 
-    // แปลง URL ก่อนบันทึกลง MongoDB
-    let normalized_url = if url.contains("สดใสเมะ.com") {
-        url.replace("สดใสเมะ.com", "xn--l3c0azab5a2gta.com")
-    } else {
-        url.to_string()
-    };
-
     // ตรวจสอบว่ามีการ์ตูนนี้ในฐานข้อมูลหรือไม่
-    match MangaService::get_by_url(&normalized_url).await {
+    match MangaService::get_by_url(url).await {
         Ok(Some(_)) => {
             show_manga_info_ui(
                 command,
@@ -99,9 +92,9 @@ async fn add_manga(ctx: &Context, command: &CommandInteraction) -> serenity::Res
             // สร้างข้อมูลการ์ตูนใหม่
             let manga: Manga = Manga::new(
                 "Untitled".to_string(), // ตั้งชื่อชั่วคราว
-                normalized_url.to_string(),
+                url.to_string(),
                 0,               // เริ่มต้นที่ตอนที่ 0
-                normalized_url.to_string(), // ใช้ URL เดิมเป็น chapter URL
+                url.to_string(), // ใช้ URL เดิมเป็น chapter URL
                 None,            // ไม่มีรูปภาพ
             );
 
