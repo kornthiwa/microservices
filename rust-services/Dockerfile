@@ -23,9 +23,9 @@ RUN mkdir -p src && \
     cargo build --release && \
     rm -rf src
 
-# Copy source code
+# Copy all remaining files (including src directory)
 # This layer will only rebuild when source code changes
-COPY src ./src
+COPY . .
 
 # Build final binary with optimizations
 # Dependencies are already compiled, so this is faster
